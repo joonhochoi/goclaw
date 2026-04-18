@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # GoClaw Gateway
 
 PostgreSQL multi-tenant AI agent gateway with WebSocket RPC + HTTP API.
@@ -94,8 +98,25 @@ ui/desktop/                   Wails v2 desktop app (React frontend + embedded ga
 ## Running
 
 ```bash
+# Initial setup
+make setup                           # go mod download + pnpm install for web
+
+# Build options
+make build                           # Backend only (CGO_ENABLED=0)
+make build-full                      # Backend + embedded web UI (-tags embedui). Requires pnpm build first.
+make build-tui                       # Backend + Bubble Tea TUI (-tags tui)
+make ci                              # build + test + vet + check-web (full CI locally)
+
 go build -o goclaw . && ./goclaw onboard && source .env.local && ./goclaw
 ./goclaw migrate up                 # DB migrations
+
+# Unit tests (all packages, with race detector)
+go test -race -timeout=90s ./...
+
+# Single package test
+go test -race ./internal/hooks/...
+go test -race -run TestFunctionName ./internal/agent/...
+
 # Integration tests (requires pgvector pg18 on port 5433)
 docker run -d --name pgtest -p 5433:5432 -e POSTGRES_PASSWORD=test -e POSTGRES_DB=goclaw_test pgvector/pgvector:pg18
 TEST_DATABASE_URL="postgres://postgres:test@localhost:5433/goclaw_test?sslmode=disable" \
@@ -107,6 +128,11 @@ make test-contracts   # P1 - API schemas (requires server)
 make test-scenarios   # P2 - user journeys (requires server)
 make test-critical    # P0 + P1 (pre-merge)
 
+# Agent Hook tests
+make test-hooks-unit                 # Unit: internal/hooks + gateway/methods
+make test-hooks-e2e                  # E2E integration (requires pgtest container)
+make test-hooks                      # Full suite (unit + e2e + chaos + rbac + tracing)
+
 cd ui/web && pnpm install && pnpm dev   # Web dashboard (dev)
 
 # Desktop (Wails + SQLite)
@@ -114,6 +140,15 @@ cd ui/desktop && wails dev -tags sqliteonly  # Dev mode with hot reload (direct)
 make desktop-dev                             # Same as above via Makefile
 make desktop-build VERSION=0.1.0             # Build .app (macOS) or .exe (Windows)
 make desktop-dmg VERSION=0.1.0               # Create .dmg installer (macOS only)
+
+# Docker Compose optional add-ons (combine with make up)
+WITH_BROWSER=1 make up              # + Rod browser (CDP)
+WITH_OTEL=1 make up                 # + OpenTelemetry collector
+WITH_SANDBOX=1 make up              # + Docker code execution sandbox
+WITH_REDIS=1 make up                # + Redis
+WITH_TAILSCALE=1 make up            # + Tailscale
+WITH_CLAUDE_CLI=1 make up           # + Claude CLI bridge
+WITH_WEB_NGINX=1 make up            # + separate nginx on :3000 (disables embedui)
 ```
 
 ## CI/CD & Releases
