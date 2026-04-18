@@ -213,12 +213,19 @@ func setupToolRegistry(
 		if et, ok := execTool.(*tools.ExecTool); ok {
 			et.DenyPaths(dataDir, ".goclaw/")
 			// Allow skills execution: master-tenant skills-store + all tenant-scoped skills-store dirs.
-			et.AllowPathExemptions(
+			goclawExemptions := []string{
 				".goclaw/skills-store/",
 				".goclaw/workspace/",
-				filepath.Join(dataDir, "skills-store")+"/",
-				filepath.Join(dataDir, "tenants")+"/",
-			)
+				filepath.Join(dataDir, "skills-store") + "/",
+				filepath.Join(dataDir, "tenants") + "/",
+			}
+			if homeDir, err := os.UserHomeDir(); err == nil {
+				goclawExemptions = append(goclawExemptions,
+					filepath.Join(homeDir, ".goclaw", "skills-store")+"/",
+					filepath.Join(homeDir, ".goclaw", "workspace")+"/",
+				)
+			}
+			et.AllowPathExemptions(goclawExemptions...)
 			// Harden: block access to internal workspace files via shell commands.
 			// Prevents `cat ../config.json`, `cat memory.db` etc. from user workspaces.
 			et.DenyPaths(
