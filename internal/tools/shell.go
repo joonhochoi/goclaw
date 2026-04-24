@@ -49,7 +49,7 @@ type ExecTool struct {
 func NewExecTool(workspace string, restrict bool) *ExecTool {
 	return &ExecTool{
 		workspace: workspace,
-		timeout:   60 * time.Second,
+		timeout:   300 * time.Second, // juno : 60 > 300 change.
 		restrict:  restrict,
 	}
 }
